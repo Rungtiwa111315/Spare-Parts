@@ -4,16 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบเบิกอุปกรณ์ภายในองค์กร (Equipment Requisition System)</title>
-    <!-- STREAMING_CHUNK:Configuring stylesheets and libraries... -->
+    <!-- Tailwind CSS for UI -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QR Code Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- Google Fonts: Prompt -->
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Prompt', sans-serif; background-color: #f1f5f9; }
         .tab-btn.active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: 600; }
-        #reader video { border-radius: 0.75rem; object-fit: cover; }
         @media print {
             body * { visibility: hidden; }
             #printableArea, #printableArea * { visibility: visible; }
@@ -23,24 +24,35 @@
 </head>
 <body class="min-h-screen flex flex-col justify-between text-slate-800">
 
-    <!-- STREAMING_CHUNK:Rendering header and navigation... -->
     <header class="bg-blue-900 text-white shadow-md">
         <div class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center">
             <div class="flex items-center space-x-3">
                 <i class="fa-solid fa-boxes-packing text-2xl text-amber-400"></i>
                 <h1 class="text-xl font-bold tracking-wide">ระบบเบิกอุปกรณ์องค์กร</h1>
             </div>
-            <div id="connectionStatus" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full flex items-center gap-1.5 mt-2 sm:mt-0">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> พร้อมใช้งาน
+            
+            <div class="flex items-center gap-3 mt-2 sm:mt-0">
+                <!-- Role Switcher -->
+                <div class="bg-blue-950/60 p-1 rounded-xl border border-blue-700/50 flex items-center text-xs">
+                    <span class="px-2.5 text-blue-300 font-medium">สิทธิ์การใช้งาน:</span>
+                    <button onclick="switchRole('user')" id="role-btn-user" class="px-3 py-1.5 rounded-lg font-semibold transition bg-blue-600 text-white shadow-sm">
+                        ผู้เบิกทั่วไป
+                    </button>
+                    <button onclick="switchRole('admin')" id="role-btn-admin" class="px-3 py-1.5 rounded-lg font-semibold transition text-blue-200 hover:text-white">
+                        ผู้ดูแลระบบ (Admin)
+                    </button>
+                </div>
             </div>
         </div>
+
+        <!-- Navigation Tabs -->
         <div class="bg-white border-b border-slate-200">
             <div class="max-w-6xl mx-auto flex overflow-x-auto text-slate-600 text-sm font-medium">
                 <button onclick="switchTab('requisition')" id="tab-requisition" class="tab-btn active px-6 py-3.5 flex items-center gap-2 whitespace-nowrap transition">
-                    <i class="fa-solid fa-qrcode"></i> เบิกอุปกรณ์ / สแกน
+                    <i class="fa-solid fa-clipboard-list"></i> เบิกอุปกรณ์ / ตรวจสอบสต็อก
                 </button>
                 <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-btn px-6 py-3.5 flex items-center gap-2 whitespace-nowrap transition">
-                    <i class="fa-solid fa-warehouse"></i> คลังอุปกรณ์ &amp; สร้าง QR
+                    <i class="fa-solid fa-warehouse"></i> <span id="tab-label-inventory">คลังอุปกรณ์ &amp; สร้าง QR</span>
                 </button>
                 <button onclick="switchTab('history')" id="tab-history" class="tab-btn px-6 py-3.5 flex items-center gap-2 whitespace-nowrap transition">
                     <i class="fa-solid fa-clock-rotate-left"></i> ประวัติการเบิก
@@ -49,63 +61,67 @@
         </div>
     </header>
 
-    <!-- STREAMING_CHUNK:Rendering main application sections... -->
     <main class="max-w-6xl mx-auto px-4 py-6 w-full flex-grow">
 
-        <!-- TAB 1: REQUISITION / SCANNER -->
+        <!-- TAB 1: REQUISITION FORM (Clean form without camera scanner) -->
         <section id="sec-requisition" class="grid grid-cols-1 md:grid-cols-12 gap-6">
-            <!-- Camera Scanner Column -->
-            <div class="md:col-span-5 bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+            <!-- Left Info / Guide Panel -->
+            <div class="md:col-span-5 bg-gradient-to-br from-blue-900 to-indigo-900 text-white p-6 rounded-2xl shadow-sm flex flex-col justify-between">
                 <div>
-                    <h2 class="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
-                        <i class="fa-solid fa-camera text-blue-600"></i> สแกน QR Code เพื่อเบิก
-                    </h2>
-                    <p class="text-xs text-slate-500 mb-4">ส่องกล้องไปที่ QR Code บนอุปกรณ์เพื่อทำรายการด่วน</p>
-                    
-                    <div id="reader" class="w-full bg-slate-900 rounded-xl overflow-hidden border-2 border-dashed border-slate-300 min-h-[250px] flex items-center justify-center relative">
-                        <div id="scanner-placeholder" class="text-center p-6 text-slate-400">
-                            <i class="fa-solid fa-qrcode text-5xl mb-2 text-slate-600"></i>
-                            <p class="text-sm">กดปุ่มเปิดกล้องเพื่อสแกน</p>
+                    <div class="inline-block bg-blue-800/80 px-3 py-1 rounded-full text-xs font-medium text-blue-200 mb-3 border border-blue-700">
+                        ขั้นตอนการเบิกอุปกรณ์
+                    </div>
+                    <h2 class="text-xl font-bold mb-2">ทำรายการเบิกอุปกรณ์</h2>
+                    <p class="text-xs text-blue-100/80 mb-6 leading-relaxed">
+                        กรุณาเลือกอุปกรณ์ที่ต้องการ ตรวจสอบจำนวนคงเหลือ และกรอกข้อมูลรายละเอียดการนำไปใช้งานให้ครบถ้วนเพื่อบันทึกประวัติการเบิก
+                    </p>
+
+                    <!-- Feature Note for Future Images -->
+                    <div class="bg-white/10 p-4 rounded-xl border border-white/10 text-xs space-y-2">
+                        <div class="font-semibold text-amber-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-lightbulb"></i> ระบบรองรับรูปภาพอุปกรณ์ (อนาคต)
                         </div>
+                        <p class="text-blue-100/70">
+                            ระบบถูกออกแบบให้รองรับการอัปโหลดและแสดงภาพตัวอย่างของอุปกรณ์แต่ละชิ้นในหน้าจัดการคลังแล้ว
+                        </p>
                     </div>
                 </div>
 
-                <div class="mt-4 flex gap-2">
-                    <button id="btn-start-scanner" onclick="startScanner()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-power-off"></i> เปิดกล้องสแกน
-                    </button>
-                    <button id="btn-stop-scanner" onclick="stopScanner()" class="hidden flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2.5 rounded-xl text-sm transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-stop"></i> ปิดกล้อง
-                    </button>
+                <div class="mt-6 pt-4 border-t border-blue-800/60 text-xs text-blue-200/60 flex items-center justify-between">
+                    <span>สถานะระบบ: พร้อมใช้งาน</span>
+                    <span id="current-role-badge" class="bg-blue-800 text-blue-200 px-2.5 py-1 rounded-md font-medium">สิทธิ์: ผู้เบิกทั่วไป</span>
                 </div>
             </div>
 
-            <!-- Manual Selection / Cart Form Column -->
-            <div class="md:col-span-7 bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
+            <!-- Requisition Form Column -->
+            <div class="md:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
                 <h2 class="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
-                    <i class="fa-solid fa-clipboard-list text-blue-600"></i> ทำรายการเบิกอุปกรณ์
+                    <i class="fa-solid fa-file-pen text-blue-600"></i> ฟอร์มเบิกอุปกรณ์
                 </h2>
-                <p class="text-xs text-slate-500 mb-4">สแกน QR Code หรือเลือกอุปกรณ์จากรายการด้านล่าง</p>
-
-                <!-- Scan Search & Notification Alert Box -->
-                <div class="mb-4">
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">รหัสอุปกรณ์ หรือ ค้นหา *</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="req-code-input" placeholder="พิมพ์หรือสแกนรหัสอุปกรณ์..." oninput="onInputCodeChange()" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 font-mono">
-                        <button type="button" onclick="searchItemByCode()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition">ค้นหา</button>
-                    </div>
-                    <div id="scan-feedback" class="mt-2 hidden text-xs p-2.5 rounded-xl border"></div>
-                </div>
+                <p class="text-xs text-slate-500 mb-5">เลือกรายการอุปกรณ์และกรอกข้อมูลผู้เบิก</p>
 
                 <form id="requisitionForm" onsubmit="handleRequisitionSubmit(event)" class="space-y-4">
-                    <!-- Selected Item Detail Card -->
-                    <div id="item-info-card" class="hidden p-3.5 rounded-xl bg-blue-50 border border-blue-100 text-xs space-y-1">
-                        <div class="flex justify-between font-semibold text-blue-900">
-                            <span id="card-item-name">-</span>
-                            <span id="card-item-stock" class="px-2 py-0.5 rounded-full bg-blue-200 text-blue-800">คงเหลือ: 0</span>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">เลือกอุปกรณ์ *</label>
+                        <select id="req-item-select" required onchange="onSelectItemChange()" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+                            <option value="">-- กรุณาเลือกอุปกรณ์ --</option>
+                        </select>
+                    </div>
+
+                    <!-- Selected Item Detail Card with Image Support -->
+                    <div id="item-info-card" class="hidden p-4 rounded-xl bg-blue-50 border border-blue-100 flex items-center gap-4">
+                        <div id="card-item-img-container" class="w-16 h-16 bg-white rounded-lg border border-blue-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                            <img id="card-item-img" src="" alt="Equipment" class="w-full h-full object-cover hidden">
+                            <i id="card-item-icon-fallback" class="fa-solid fa-box text-blue-300 text-xl"></i>
                         </div>
-                        <div class="text-slate-600">รหัส: <span id="card-item-code" class="font-mono text-slate-800">-</span> | หมวดหมู่: <span id="card-item-category">-</span></div>
-                        <div id="card-item-location" class="text-slate-500 text-[11px]">สถานที่: -</div>
+                        <div class="flex-grow space-y-1 text-xs">
+                            <div class="flex justify-between items-center">
+                                <span id="card-item-name" class="font-bold text-blue-900 text-sm">-</span>
+                                <span id="card-item-stock" class="px-2.5 py-0.5 rounded-full bg-blue-200 text-blue-800 font-semibold">คงเหลือ: 0</span>
+                            </div>
+                            <div class="text-slate-600">รหัส: <span id="card-item-code" class="font-mono text-slate-800 font-semibold">-</span></div>
+                            <div class="text-slate-600">ประเภท: <span id="card-item-category">-</span> | สถานที่: <span id="card-item-loc">-</span></div>
+                        </div>
                     </div>
 
                     <div>
@@ -129,14 +145,14 @@
                         <input type="text" id="req-note" placeholder="ระบุเครื่องจักร หรือจุดที่นำไปใช้งาน" required class="w-full border border-slate-300 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
 
-                    <button type="submit" id="btn-submit-req" disabled class="w-full bg-slate-300 text-slate-500 font-semibold py-3 rounded-xl transition text-sm flex items-center justify-center gap-2 cursor-not-allowed">
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition text-sm shadow-md flex items-center justify-center gap-2">
                         <i class="fa-solid fa-check-circle"></i> ยืนยันการเบิกอุปกรณ์
                     </button>
                 </form>
             </div>
         </section>
 
-        <!-- TAB 2: INVENTORY & QR MANAGEMENT -->
+        <!-- TAB 2: INVENTORY & QR MANAGEMENT (Restricted to Admin for editing/adding, Viewable for users) -->
         <section id="sec-inventory" class="hidden space-y-6">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
                 <div class="flex flex-wrap justify-between items-center gap-4 mb-5">
@@ -144,30 +160,35 @@
                         <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
                             <i class="fa-solid fa-boxes-stacked text-blue-600"></i> คลังข้อมูลอุปกรณ์ทั้งหมด
                         </h2>
-                        <p class="text-xs text-slate-500">จัดการรายการอุปกรณ์ เพิ่มสต็อก และสร้าง QR Code สำหรับติดหน้างาน</p>
+                        <p class="text-xs text-slate-500">ตรวจสอบสต็อก รหัสอุปกรณ์ และสร้าง QR Code</p>
                     </div>
-                    <div class="flex gap-2">
+                    
+                    <!-- Admin Only Controls -->
+                    <div id="admin-controls-panel" class="flex gap-2 flex-wrap">
                         <button onclick="openAddItemModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-sm">
-                            <i class="fa-solid fa-plus"></i> เพิ่มทีละชิ้น
+                            <i class="fa-solid fa-plus"></i> เพิ่มอุปกรณ์ใหม่
                         </button>
                         <button onclick="downloadCSVTemplate()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium px-3 py-2.5 rounded-xl transition flex items-center gap-1">
                             <i class="fa-solid fa-file-csv text-emerald-600"></i> โหลดแบบฟอร์ม
                         </button>
                         <label class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium px-3 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1 shadow-sm">
-                            <i class="fa-solid fa-file-import"></i> นำเข้า Excel (CSV)
+                            <i class="fa-solid fa-file-import"></i> นำเข้า CSV
                             <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="importCSV(event)">
                         </label>
                     </div>
                 </div>
 
+                <!-- Search Filter Bar -->
                 <div class="mb-4">
                     <input type="text" id="inventory-search" oninput="renderInventoryTable()" placeholder="ค้นหาชื่อ หรือ รหัสอุปกรณ์..." class="w-full max-w-xs border border-slate-300 rounded-xl px-3.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
 
+                <!-- Inventory Table -->
                 <div class="overflow-x-auto rounded-xl border border-slate-200">
                     <table class="w-full text-left text-xs text-slate-600">
                         <thead class="bg-slate-100 text-slate-700 uppercase font-semibold border-b border-slate-200">
                             <tr>
+                                <th class="p-3 w-12 text-center">รูป</th>
                                 <th class="p-3">ประเภทอุปกรณ์</th>
                                 <th class="p-3">รหัสอุปกรณ์</th>
                                 <th class="p-3">รายละเอียดอุปกรณ์</th>
@@ -176,13 +197,14 @@
                             </tr>
                         </thead>
                         <tbody id="inventory-tbody" class="divide-y divide-slate-200 bg-white">
+                            <!-- Items injected dynamically -->
                         </tbody>
                     </table>
                 </div>
             </div>
         </section>
 
-        <!-- TAB 3: HISTORY & EXPORT -->
+        <!-- TAB 3: HISTORY (Restricted to Admin for editing/deleting, Users can only view) -->
         <section id="sec-history" class="hidden space-y-6">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
                 <div class="flex flex-wrap justify-between items-center gap-4 mb-5">
@@ -190,13 +212,14 @@
                         <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
                             <i class="fa-solid fa-clock-rotate-left text-blue-600"></i> ประวัติการเบิกอุปกรณ์
                         </h2>
-                        <p class="text-xs text-slate-500">ตรวจสอบย้อนหลัง และส่งออกข้อมูลเป็นไฟล์ Excel (CSV)</p>
+                        <p class="text-xs text-slate-500">ตรวจสอบประวัติย้อนหลังและส่งออกรายงาน Excel (CSV)</p>
                     </div>
                     <button onclick="exportHistoryCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-4 py-2.5 rounded-xl transition flex items-center gap-2 shadow-sm">
                         <i class="fa-solid fa-file-excel"></i> ส่งออก Excel (CSV)
                     </button>
                 </div>
 
+                <!-- History Table -->
                 <div class="overflow-x-auto rounded-xl border border-slate-200">
                     <table class="w-full text-left text-xs text-slate-600">
                         <thead class="bg-slate-100 text-slate-700 uppercase font-semibold border-b border-slate-200">
@@ -209,9 +232,11 @@
                                 <th class="p-3">ผู้เบิก</th>
                                 <th class="p-3">แผนก</th>
                                 <th class="p-3">จุดใช้งาน / เครื่องที่นำไปใช้</th>
+                                <th id="history-th-action" class="p-3 text-center hidden">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody id="history-tbody" class="divide-y divide-slate-200 bg-white">
+                            <!-- History items injected dynamically -->
                         </tbody>
                     </table>
                 </div>
@@ -220,21 +245,22 @@
 
     </main>
 
-    <!-- MODAL 1: ADD NEW ITEM -->
+    <!-- MODAL: ADD/EDIT ITEM (Admin Only) -->
     <div id="modal-add-item" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
         <div class="bg-white w-full max-w-md rounded-2xl p-5 shadow-xl space-y-4">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 class="font-bold text-slate-800 text-base">เพิ่มอุปกรณ์ใหม่เข้าคลัง</h3>
+                <h3 id="modal-item-title" class="font-bold text-slate-800 text-base">เพิ่มอุปกรณ์ใหม่เข้าคลัง</h3>
                 <button onclick="closeAddItemModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
             </div>
-            <form onsubmit="handleAddItemSubmit(event)" class="space-y-3 text-xs">
+            <form onsubmit="handleSaveItemSubmit(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="edit-item-id">
                 <div>
                     <label class="block font-semibold text-slate-600 mb-1">ประเภทอุปกรณ์ *</label>
-                    <input type="text" id="add-category" placeholder="เช่น Relay, Sensor" required class="w-full border border-slate-300 rounded-lg p-2.5">
+                    <input type="text" id="add-category" placeholder="เช่น Relay, Sensor, Valve" required class="w-full border border-slate-300 rounded-lg p-2.5">
                 </div>
                 <div>
                     <label class="block font-semibold text-slate-600 mb-1">รหัสอุปกรณ์ (Code/ID) *</label>
-                    <input type="text" id="add-code" placeholder="เช่น MODER : TSBSB10" required class="w-full border border-slate-300 rounded-lg p-2.5 font-mono">
+                    <input type="text" id="add-code" placeholder="เช่น REL-001" required class="w-full border border-slate-300 rounded-lg p-2.5 font-mono">
                 </div>
                 <div>
                     <label class="block font-semibold text-slate-600 mb-1">รายละเอียดอุปกรณ์ *</label>
@@ -250,15 +276,20 @@
                         <input type="text" id="add-location" placeholder="เช่น ตู้ A ชั้น 2" class="w-full border border-slate-300 rounded-lg p-2.5">
                     </div>
                 </div>
+                <!-- Future Image Support URL Input -->
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">ลิงก์รูปภาพอุปกรณ์ (รองรับในอนาคต)</label>
+                    <input type="url" id="add-image" placeholder="https://example.com/image.jpg" class="w-full border border-slate-300 rounded-lg p-2.5">
+                </div>
                 <div class="pt-2 flex gap-2">
                     <button type="button" onclick="closeAddItemModal()" class="flex-1 bg-slate-100 text-slate-600 py-2.5 rounded-xl font-medium">ยกเลิก</button>
-                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2.5 rounded-xl font-semibold shadow-sm hover:bg-blue-700">บันทึกอุปกรณ์</button>
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2.5 rounded-xl font-semibold shadow-sm hover:bg-blue-700">บันทึกข้อมูล</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- MODAL 2: QR CODE SHOW & PRINT (Updated Layout: ID on top, details smaller, category at bottom) -->
+    <!-- MODAL: QR CODE SHOW & PRINT -->
     <div id="modal-qr" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
         <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-xl text-center space-y-4">
             <div class="flex justify-between items-center border-b border-slate-100 pb-2">
@@ -267,27 +298,19 @@
             </div>
 
             <div id="printableArea" class="flex flex-col items-center justify-center p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                <!-- 1. Equipment ID at top (Prominent) -->
                 <div id="qr-modal-code" class="font-bold text-slate-900 text-sm font-mono tracking-wide">
                     รหัส: -
                 </div>
-
-                <!-- 2. Equipment Name/Details (Smaller font) -->
                 <div id="qr-modal-name" class="font-normal text-slate-600 text-[11px] mt-1 mb-3 max-w-[220px] leading-tight">
                     รายละเอียดอุปกรณ์
                 </div>
-
-                <!-- QR Container -->
                 <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center">
                     <div id="qrcode-canvas"></div>
                 </div>
-
-                <!-- 3. Category at bottom -->
                 <div class="mt-3 flex items-center gap-1 text-[10px] text-slate-500 font-medium">
                     <span class="text-slate-400">ประเภท:</span>
                     <span id="qr-modal-category" class="bg-slate-200/60 px-2 py-0.5 rounded text-slate-700">-</span>
                 </div>
-
                 <p class="text-[9px] text-slate-400 mt-2">สแกนเพื่อเปิดหน้าเว็บเบิกอุปกรณ์นี้โดยตรง</p>
             </div>
 
@@ -304,41 +327,82 @@
         ระบบเบิกอุปกรณ์ &amp; จัดการสต็อกผ่าน QR Code &copy; 2026
     </footer>
 
-    <!-- STREAMING_CHUNK:Initializing application logic & QR extraction handlers... -->
     <script>
+        // Initial Mock Data with support for image URLs
         const defaultInventory = [
-            { id: "1", category: "Relay", code: "MODER : TSBSB05", name: "Annealing", stock: 10, location: "Spareparts Room ตู้ที่ 1" },
-            { id: "2", category: "Relay", code: "MODER : TSBSB10", name: "Annealing", stock: 5, location: "Spareparts Room ตู้ที่ 1" },
-            { id: "3", category: "Relay", code: "MODER : TSBSB30", name: "Annealing", stock: 0, location: "Spareparts Room ตู้ที่ 1" },
-            { id: "4", category: "Sensor", code: "SW-T0V5", name: "KCR กระบอกสูบ", stock: 1, location: "Spareparts Room ตู้ที่ 1" },
-            { id: "5", category: "Sensor", code: "FL7M-3J6HD", name: "KCR sensor Laoder", stock: 2, location: "Spareparts Room ตู้ที่ 1" },
-            { id: "6", category: "Sensor", code: "FL7M-3J6HDG", name: "KCR sensor Laoder", stock: 5, location: "Spareparts Room ตู้ที่ 1" },
-            { id: "7", category: "Sensor", code: "E2E-X2D1-R", name: "Matsusaka-เครื่องเจาะแยก //KCR-work support", stock: 0, location: "Spareparts Room ตู้ 1" },
-            { id: "8", category: "Sensor", code: "E2E-X3D1-N 2M", name: "KCR Mandrel", stock: 0, location: "Spareparts Room ตู้ 1" },
-            { id: "9", category: "Sensor", code: "EM-080", name: "KCR Sizing", stock: 1, location: "Spareparts Room ตู้ 1" }
+            { id: "1", category: "Relay", code: "MODER : TSBSB10", name: "Annealing", stock: 10, location: "Spareparts Room", image: "" },
+            { id: "2", category: "Relay", code: "MODER : TSBSB10-N", name: "Tempering Control", stock: 5, location: "Spareparts Room", image: "" },
+            { id: "3", category: "Relay", code: "MODER : TSBSB10-OUT", name: "Exhaust Module", stock: 0, location: "Spareparts Room", image: "" },
+            { id: "4", category: "Sensor", code: "SW-T0V5", name: "Proximity Sensor 24V", stock: 1, location: "Spareparts Room", image: "" },
+            { id: "5", category: "Sensor", code: "FL7M-3J6HD", name: "Inductive Sensor", stock: 2, location: "Spareparts Room", image: "" },
+            { id: "6", category: "Sensor", code: "FL7M-3J6HD-N", name: "Compact Sensor", stock: 5, location: "Spareparts Room", image: "" },
+            { id: "7", category: "Sensor", code: "E2E-X2D1-R", name: "Matsusaka-เครื่องเจาะแยก //KCR-work support", stock: 0, location: "Spareparts Room ตู้ 1", image: "" },
+            { id: "8", category: "Sensor", code: "E2E-X3D1-N 2M", name: "KCR Mandrel", stock: 0, location: "Spareparts Room ตู้ 1", image: "" },
+            { id: "9", category: "Sensor", code: "EM-080", name: "KCR Sizing", stock: 1, location: "Spareparts Room ตู้ 1", image: "" },
+            { id: "10", category: "Sensor", code: "IS10E-3003-Z-A", name: "SG gauge pressure", stock: 5, location: "Spareparts Room ตู้ 1", image: "" }
         ];
 
         const defaultHistory = [
             { id: "h1", date: "2026-06-06", time: "08:30:15", code: "MODER : TSBSB10", name: "Annealing", qty: 1, requester: "สมชาย ใจดี", department: "การซ่อมบำรุง", note: "งานซ่อมอาคาร" }
         ];
 
+        // Global States
         let inventory = JSON.parse(localStorage.getItem('eq_inventory')) || defaultInventory;
         let historyData = JSON.parse(localStorage.getItem('eq_history')) || defaultHistory;
-        let html5QrcodeScanner = null;
-        let isScannerRunning = false;
-        let currentSelectedItem = null;
+        let currentRole = localStorage.getItem('eq_role') || 'user'; // 'user' or 'admin'
 
+        // Save State
         function saveData() {
             localStorage.setItem('eq_inventory', JSON.stringify(inventory));
             localStorage.setItem('eq_history', JSON.stringify(historyData));
         }
 
+        // Initialize Application
         window.addEventListener('DOMContentLoaded', () => {
+            applyRoleUI();
+            populateSelectOptions();
             renderInventoryTable();
             renderHistoryTable();
-            checkURLQueryForAutoScan();
+            checkURLQueryForAutoSelect();
         });
 
+        // Switch Role Functionality
+        function switchRole(role) {
+            currentRole = role;
+            localStorage.setItem('eq_role', role);
+            applyRoleUI();
+            renderInventoryTable();
+            renderHistoryTable();
+        }
+
+        function applyRoleUI() {
+            const btnUser = document.getElementById('role-btn-user');
+            const btnAdmin = document.getElementById('role-btn-admin');
+            const adminPanel = document.getElementById('admin-controls-panel');
+            const roleBadge = document.getElementById('current-role-badge');
+            const tabLabelInv = document.getElementById('tab-label-inventory');
+            const historyThAction = document.getElementById('history-th-action');
+
+            if (currentRole === 'admin') {
+                btnAdmin.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-blue-600 text-white shadow-sm";
+                btnUser.className = "px-3 py-1.5 rounded-lg font-semibold transition text-blue-200 hover:text-white";
+                adminPanel.classList.remove('hidden');
+                roleBadge.textContent = "สิทธิ์: ผู้ดูแลระบบ (Admin)";
+                roleBadge.className = "bg-amber-600 text-white px-2.5 py-1 rounded-md font-medium";
+                tabLabelInv.textContent = "จัดการคลัง & QR Code";
+                historyThAction.classList.remove('hidden');
+            } else {
+                btnUser.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-blue-600 text-white shadow-sm";
+                btnAdmin.className = "px-3 py-1.5 rounded-lg font-semibold transition text-blue-200 hover:text-white";
+                adminPanel.classList.add('hidden');
+                roleBadge.textContent = "สิทธิ์: ผู้เบิกทั่วไป";
+                roleBadge.className = "bg-blue-800 text-blue-200 px-2.5 py-1 rounded-md font-medium";
+                tabLabelInv.textContent = "คลังอุปกรณ์ & QR Code";
+                historyThAction.classList.add('hidden');
+            }
+        }
+
+        // Tab Navigation
         function switchTab(tabName) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('tab-' + tabName).classList.add('active');
@@ -348,105 +412,65 @@
             document.getElementById('sec-history').classList.add('hidden');
 
             document.getElementById('sec-' + tabName).classList.remove('hidden');
-
-            if (tabName !== 'requisition') {
-                stopScanner();
-            }
         }
 
-        // Handle Input & Real-time Code Matching
-        function onInputCodeChange() {
-            const rawVal = document.getElementById('req-code-input').value.trim();
-            if (!rawVal) {
-                resetItemCard();
+        // Populate Select Dropdown
+        function populateSelectOptions() {
+            const select = document.getElementById('req-item-select');
+            const currentSelected = select.value;
+            select.innerHTML = '<option value="">-- กรุณาเลือกอุปกรณ์ --</option>';
+            inventory.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.code;
+                opt.textContent = `[${item.code}] ${item.name} (คงเหลือ: ${item.stock})`;
+                select.appendChild(opt);
+            });
+            if (currentSelected) select.value = currentSelected;
+        }
+
+        function onSelectItemChange() {
+            const code = document.getElementById('req-item-select').value;
+            const card = document.getElementById('item-info-card');
+            if (!code) {
+                card.classList.add('hidden');
                 return;
             }
-            findAndVerifyItem(rawVal);
-        }
-
-        function searchItemByCode() {
-            const rawVal = document.getElementById('req-code-input').value.trim();
-            if (!rawVal) return;
-            findAndVerifyItem(rawVal);
-        }
-
-        function findAndVerifyItem(scannedText) {
-            let targetCode = scannedText;
-            
-            // If scanned text is a full URL containing query parameter (e.g. ?item=...)
-            if (scannedText.includes('item=')) {
-                try {
-                    const urlObj = new URL(scannedText);
-                    targetCode = decodeURIComponent(urlObj.searchParams.get('item') || scannedText);
-                } catch (e) {
-                    const parts = scannedText.split('item=');
-                    if (parts.length > 1) {
-                        targetCode = decodeURIComponent(parts[1].split('&')[0]);
-                    }
-                }
-            }
-
-            // Clean up exact code match
-            const item = inventory.find(i => i.code.trim().toLowerCase() === targetCode.trim().toLowerCase());
-            const feedback = document.getElementById('scan-feedback');
-            const card = document.getElementById('item-info-card');
-            const submitBtn = document.getElementById('btn-submit-req');
-
-            feedback.classList.remove('hidden');
-
+            const item = inventory.find(i => i.code === code);
             if (item) {
-                currentSelectedItem = item;
-                document.getElementById('req-code-input').value = item.code;
-                
-                feedback.className = "mt-2 text-xs p-2.5 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-800";
-                feedback.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i> พบอุปกรณ์: <strong>${item.name}</strong>`;
-
                 document.getElementById('card-item-name').textContent = item.name;
                 document.getElementById('card-item-code').textContent = item.code;
                 document.getElementById('card-item-category').textContent = item.category;
                 document.getElementById('card-item-stock').textContent = `คงเหลือ: ${item.stock}`;
-                document.getElementById('card-item-location').textContent = `สถานที่: ${item.location || '-'}`;
+                document.getElementById('card-item-loc').textContent = item.location || '-';
+
+                // Image handling
+                const imgEl = document.getElementById('card-item-img');
+                const iconEl = document.getElementById('card-item-icon-fallback');
+                if (item.image && item.image.trim() !== '') {
+                    imgEl.src = item.image;
+                    imgEl.classList.remove('hidden');
+                    iconEl.classList.add('hidden');
+                } else {
+                    imgEl.classList.add('hidden');
+                    iconEl.classList.remove('hidden');
+                }
+
                 card.classList.remove('hidden');
-
-                submitBtn.disabled = false;
-                submitBtn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition text-sm shadow-md flex items-center justify-center gap-2 cursor-pointer";
-            } else {
-                currentSelectedItem = null;
-                feedback.className = "mt-2 text-xs p-2.5 rounded-xl border bg-rose-50 border-rose-200 text-rose-800";
-                feedback.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-600"></i> ไม่พบรหัสอุปกรณ์ <strong>"${targetCode}"</strong> ในระบบ`;
-                card.classList.add('hidden');
-
-                submitBtn.disabled = true;
-                submitBtn.className = "w-full bg-slate-300 text-slate-500 font-semibold py-3 rounded-xl transition text-sm flex items-center justify-center gap-2 cursor-not-allowed";
             }
         }
 
-        function resetItemCard() {
-            currentSelectedItem = null;
-            document.getElementById('item-info-card').classList.add('hidden');
-            const feedback = document.getElementById('scan-feedback');
-            feedback.classList.add('hidden');
-            const submitBtn = document.getElementById('btn-submit-req');
-            submitBtn.disabled = true;
-            submitBtn.className = "w-full bg-slate-300 text-slate-500 font-semibold py-3 rounded-xl transition text-sm flex items-center justify-center gap-2 cursor-not-allowed";
-        }
-
-        // Requisition Form Submission
+        // Requisition Submission
         function handleRequisitionSubmit(e) {
             e.preventDefault();
-            if (!currentSelectedItem) {
-                alert('กรุณาระบุรหัสอุปกรณ์ที่ถูกต้อง');
-                return;
-            }
-
+            const code = document.getElementById('req-item-select').value;
             const qty = parseInt(document.getElementById('req-qty').value);
-            const requester = document.getElementById('req-requester').value.trim();
-            const department = document.getElementById('req-department').value.trim();
-            const note = document.getElementById('req-note').value.trim();
+            const requester = document.getElementById('req-requester').value;
+            const department = document.getElementById('req-department').value;
+            const note = document.getElementById('req-note').value;
 
-            const itemIndex = inventory.findIndex(i => i.code === currentSelectedItem.code);
+            const itemIndex = inventory.findIndex(i => i.code === code);
             if (itemIndex === -1) {
-                alert('ไม่พบรหัสอุปกรณ์ในระบบคลัง');
+                alert('ไม่พบรหัสอุปกรณ์ในระบบ');
                 return;
             }
 
@@ -455,10 +479,10 @@
                 return;
             }
 
-            // Deduct stock
+            // Deduct Stock
             inventory[itemIndex].stock -= qty;
 
-            // Record history
+            // Add History Record
             const now = new Date();
             const newRecord = {
                 id: 'h' + Date.now(),
@@ -475,19 +499,20 @@
             historyData.unshift(newRecord);
             saveData();
 
+            // Refresh UI
+            populateSelectOptions();
             renderInventoryTable();
             renderHistoryTable();
 
-            // Reset form
+            // Reset Form
             document.getElementById('requisitionForm').reset();
-            document.getElementById('req-code-input').value = '';
-            resetItemCard();
+            document.getElementById('item-info-card').classList.add('hidden');
 
             alert('บันทึกการเบิกอุปกรณ์เรียบร้อยแล้ว!');
             switchTab('history');
         }
 
-        // Render Inventory
+        // Render Inventory Table with Image & Role Check
         function renderInventoryTable() {
             const tbody = document.getElementById('inventory-tbody');
             const search = document.getElementById('inventory-search').value.toLowerCase();
@@ -502,35 +527,70 @@
             filtered.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition";
-                tr.innerHTML = `
-                    <td class="p-3"><span class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[11px] font-medium">${item.category}</span></td>
-                    <td class="p-3 font-mono text-blue-600 font-semibold">${item.code}</td>
-                    <td class="p-3">
-                        <div class="font-medium text-slate-800">${item.name}</div>
-                        ${item.location ? `<div class="text-[10px] text-slate-400">สถานที่เก็บ: \${item.location}</div>` : ''}
-                    </td>
-                    <td class="p-3 text-center font-bold text-sm ${item.stock > 0 ? 'text-emerald-600' : 'text-rose-600'}">${item.stock}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="showQRModal('${item.code}')" title="สร้าง/แสดง QR Code" class="text-blue-600 hover:text-blue-800 p-1.5 rounded-lg hover:bg-blue-50 transition">
-                            <i class="fa-solid fa-qrcode text-base"></i>
+                
+                let actionButtons = `
+                    <button onclick="showQRModal('${item.code}')" title="สร้าง/แสดง QR Code" class="text-blue-600 hover:text-blue-800 p-1.5 rounded-lg hover:bg-blue-50 transition">
+                        <i class="fa-solid fa-qrcode text-base"></i>
+                    </button>
+                `;
+
+                if (currentRole === 'admin') {
+                    actionButtons += `
+                        <button onclick="openEditItemModal('${item.id}')" title="แก้ไขข้อมูล" class="text-amber-600 hover:text-amber-800 p-1.5 rounded-lg hover:bg-amber-50 transition ml-1">
+                            <i class="fa-solid fa-pen-to-square text-base"></i>
                         </button>
                         <button onclick="deleteItem('${item.id}')" title="ลบ" class="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 transition ml-1">
                             <i class="fa-solid fa-trash text-base"></i>
                         </button>
+                    `;
+                }
+
+                const imgHtml = item.image ? 
+                    `<img src="${item.image}" alt="" class="w-10 h-10 object-cover rounded-lg border border-slate-200">` : 
+                    `<div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 text-xs"><i class="fa-solid fa-image"></i></div>`;
+
+                tr.innerHTML = `
+                    <td class="p-3 text-center">${imgHtml}</td>
+                    <td class="p-3"><span class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[11px] font-medium">${item.category}</span></td>
+                    <td class="p-3 font-mono text-blue-600 font-semibold">${item.code}</td>
+                    <td class="p-3">
+                        <div class="font-medium text-slate-800">${item.name}</div>
+                        ${item.location ? `<div class="text-[10px] text-slate-400">สถานที่เก็บ: ${item.location}</div>` : ''}
                     </td>
+                    <td class="p-3 text-center font-bold text-sm ${item.stock > 0 ? 'text-emerald-600' : 'text-rose-600'}">${item.stock}</td>
+                    <td class="p-3 text-center whitespace-nowrap">${actionButtons}</td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        // Render History
+        // Render History Table with Admin Delete Control
         function renderHistoryTable() {
             const tbody = document.getElementById('history-tbody');
+            const historyThAction = document.getElementById('history-th-action');
             tbody.innerHTML = '';
+
+            if (currentRole === 'admin') {
+                historyThAction.classList.remove('hidden');
+            } else {
+                historyThAction.classList.add('hidden');
+            }
 
             historyData.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition";
+                
+                let actionTd = '';
+                if (currentRole === 'admin') {
+                    actionTd = `
+                        <td class="p-3 text-center">
+                            <button onclick="deleteHistoryItem('${item.id}')" title="ลบประวัติ" class="text-rose-500 hover:text-rose-700 p-1 rounded hover:bg-rose-50 transition">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                }
+
                 tr.innerHTML = `
                     <td class="p-3 whitespace-nowrap">${item.date}</td>
                     <td class="p-3 whitespace-nowrap text-slate-400">${item.time}</td>
@@ -540,63 +600,13 @@
                     <td class="p-3">${item.requester}</td>
                     <td class="p-3"><span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[11px]">${item.department}</span></td>
                     <td class="p-3 text-slate-500">${item.note}</td>
+                    ${currentRole === 'admin' ? actionTd : ''}
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        // Camera Scanner Logic
-        function startScanner() {
-            document.getElementById('scanner-placeholder').classList.add('hidden');
-            document.getElementById('btn-start-scanner').classList.add('hidden');
-            document.getElementById('btn-stop-scanner').classList.remove('hidden');
-
-            html5QrcodeScanner = new Html5Qrcode("reader");
-            html5QrcodeScanner.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 220, height: 220 } },
-                onScanSuccess,
-                onScanFailure
-            ).then(() => {
-                isScannerRunning = true;
-            }).catch(err => {
-                alert("ไม่สามารถเปิดกล้องได้: " + err);
-                stopScanner();
-            });
-        }
-
-        function stopScanner() {
-            if (html5QrcodeScanner && isScannerRunning) {
-                html5QrcodeScanner.stop().then(() => {
-                    isScannerRunning = false;
-                    html5QrcodeScanner.clear();
-                    resetScannerUI();
-                }).catch((err) => {
-                    isScannerRunning = false;
-                    resetScannerUI();
-                });
-            } else {
-                resetScannerUI();
-            }
-        }
-
-        function resetScannerUI() {
-            document.getElementById('scanner-placeholder').classList.remove('hidden');
-            document.getElementById('btn-start-scanner').classList.remove('hidden');
-            document.getElementById('btn-stop-scanner').classList.add('hidden');
-        }
-
-        function onScanSuccess(decodedText) {
-            stopScanner();
-            document.getElementById('req-code-input').value = decodedText;
-            findAndVerifyItem(decodedText);
-        }
-
-        function onScanFailure(error) {
-            // ignore scan noise
-        }
-
-        // QR Code Modal
+        // Modal QR Code Controls
         function showQRModal(code) {
             const item = inventory.find(i => i.code === code);
             if (!item) return;
@@ -629,8 +639,42 @@
             document.getElementById('modal-qr').classList.remove('flex');
         }
 
-        // Add Item Modal
+        // Admin Add / Edit Item Modal Controls
         function openAddItemModal() {
+            if (currentRole !== 'admin') {
+                alert('เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถเพิ่มหรือแก้ไขอุปกรณ์ได้');
+                return;
+            }
+            document.getElementById('modal-item-title').textContent = "เพิ่มอุปกรณ์ใหม่เข้าคลัง";
+            document.getElementById('edit-item-id').value = '';
+            document.getElementById('add-category').value = '';
+            document.getElementById('add-code').value = '';
+            document.getElementById('add-name').value = '';
+            document.getElementById('add-stock').value = '1';
+            document.getElementById('add-location').value = '';
+            document.getElementById('add-image').value = '';
+
+            document.getElementById('modal-add-item').classList.remove('hidden');
+            document.getElementById('modal-add-item').classList.add('flex');
+        }
+
+        function openEditItemModal(id) {
+            if (currentRole !== 'admin') {
+                alert('เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถแก้ไขอุปกรณ์ได้');
+                return;
+            }
+            const item = inventory.find(i => i.id === id);
+            if (!item) return;
+
+            document.getElementById('modal-item-title').textContent = "แก้ไขข้อมูลอุปกรณ์";
+            document.getElementById('edit-item-id').value = item.id;
+            document.getElementById('add-category').value = item.category;
+            document.getElementById('add-code').value = item.code;
+            document.getElementById('add-name').value = item.name;
+            document.getElementById('add-stock').value = item.stock;
+            document.getElementById('add-location').value = item.location || '';
+            document.getElementById('add-image').value = item.image || '';
+
             document.getElementById('modal-add-item').classList.remove('hidden');
             document.getElementById('modal-add-item').classList.add('flex');
         }
@@ -640,39 +684,75 @@
             document.getElementById('modal-add-item').classList.remove('flex');
         }
 
-        function handleAddItemSubmit(e) {
+        function handleSaveItemSubmit(e) {
             e.preventDefault();
-            const newItem = {
-                id: String(Date.now()),
-                category: document.getElementById('add-category').value.trim(),
-                code: document.getElementById('add-code').value.trim(),
-                name: document.getElementById('add-name').value.trim(),
-                stock: parseInt(document.getElementById('add-stock').value) || 0,
-                location: document.getElementById('add-location').value.trim()
-            };
+            const editId = document.getElementById('edit-item-id').value;
+            const category = document.getElementById('add-category').value.trim();
+            const code = document.getElementById('add-code').value.trim();
+            const name = document.getElementById('add-name').value.trim();
+            const stock = parseInt(document.getElementById('add-stock').value) || 0;
+            const location = document.getElementById('add-location').value.trim();
+            const image = document.getElementById('add-image').value.trim();
 
-            inventory.push(newItem);
+            if (editId) {
+                // Edit existing
+                const index = inventory.findIndex(i => i.id === editId);
+                if (index !== -1) {
+                    inventory[index] = { ...inventory[index], category, code, name, stock, location, image };
+                }
+            } else {
+                // Add new
+                const newItem = {
+                    id: String(Date.now()),
+                    category,
+                    code,
+                    name,
+                    stock,
+                    location,
+                    image
+                };
+                inventory.push(newItem);
+            }
+
             saveData();
+            populateSelectOptions();
             renderInventoryTable();
             closeAddItemModal();
-            alert('เพิ่มอุปกรณ์เรียบร้อยแล้ว');
+            alert('บันทึกข้อมูลอุปกรณ์สำเร็จ');
         }
 
         function deleteItem(id) {
+            if (currentRole !== 'admin') {
+                alert('เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถลบอุปกรณ์ได้');
+                return;
+            }
             if (confirm('คุณต้องการลบอุปกรณ์นี้ออกจากระบบใช่หรือไม่?')) {
                 inventory = inventory.filter(i => i.id !== id);
                 saveData();
+                populateSelectOptions();
                 renderInventoryTable();
+            }
+        }
+
+        function deleteHistoryItem(id) {
+            if (currentRole !== 'admin') {
+                alert('เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถลบประวัติได้');
+                return;
+            }
+            if (confirm('คุณต้องการลบประวัติการเบิกนี้ใช่หรือไม่?')) {
+                historyData = historyData.filter(h => h.id !== id);
+                saveData();
+                renderHistoryTable();
             }
         }
 
         // CSV Import / Export
         function downloadCSVTemplate() {
-            const csvContent = "\uFEFFcategory,code,name,stock,location\nRelay,MODER : TSBSB10,Annealing,5,Spareparts Room\nSensor,SW-T0V5,KCR กระบอกสูบ,1,Spareparts Room";
+            const csvContent = "\uFEFFcategory,code,name,stock,location,image\nRelay,REL-001,Relay 24V,10,ตู้ A,\nSensor,SEN-001,Sensor Proximity,5,ตู้ B,";
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.setAttribute("download", "Template_Import_Equipment.csv");
+            link.setAttribute("download", "แบบฟอร์มนำเข้าอุปกรณ์.csv");
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -690,29 +770,21 @@
                 for (let i = 1; i < lines.length; i++) {
                     const row = lines[i].split(',');
                     if (row.length >= 4 && row[1].trim()) {
-                        const code = row[1].trim();
-                        const existingIdx = inventory.findIndex(item => item.code.toLowerCase() === code.toLowerCase());
-                        
-                        if (existingIdx !== -1) {
-                            inventory[existingIdx].category = row[0].trim() || inventory[existingIdx].category;
-                            inventory[existingIdx].name = row[2].trim() || inventory[existingIdx].name;
-                            inventory[existingIdx].stock = parseInt(row[3].trim()) || inventory[existingIdx].stock;
-                            if (row[4]) inventory[existingIdx].location = row[4].trim();
-                        } else {
-                            inventory.push({
-                                id: String(Date.now() + i),
-                                category: row[0].trim() || 'ทั่วไป',
-                                code: code,
-                                name: row[2].trim(),
-                                stock: parseInt(row[3].trim()) || 0,
-                                location: row[4] ? row[4].trim() : ''
-                            });
-                        }
+                        inventory.push({
+                            id: String(Date.now() + i),
+                            category: row[0].trim() || 'ทั่วไป',
+                            code: row[1].trim(),
+                            name: row[2].trim(),
+                            stock: parseInt(row[3].trim()) || 0,
+                            location: row[4] ? row[4].trim() : '',
+                            image: row[5] ? row[5].trim() : ''
+                        });
                         addedCount++;
                     }
                 }
 
                 saveData();
+                populateSelectOptions();
                 renderInventoryTable();
                 alert(`นำเข้าข้อมูลสำเร็จ ${addedCount} รายการ`);
             };
@@ -735,16 +807,16 @@
         }
 
         // Auto Select if URL Query parameter exists
-        function checkURLQueryForAutoScan() {
+        function checkURLQueryForAutoSelect() {
             const urlParams = new URLSearchParams(window.location.search);
             const itemCode = urlParams.get('item');
             if (itemCode) {
                 switchTab('requisition');
-                document.getElementById('req-code-input').value = itemCode;
-                findAndVerifyItem(itemCode);
+                const select = document.getElementById('req-item-select');
+                select.value = itemCode;
+                onSelectItemChange();
             }
         }
     </script>
 </body>
 </html>
-```eof
